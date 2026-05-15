@@ -1,0 +1,22 @@
+LOCALHOST RUN INSTRUCTIONS
+
+This is a static browser app, not an npm/Vite project.
+Do not run npm install unless you intentionally rebuild the app from source.
+
+Option 1 - easiest on Windows:
+1. Extract this zip.
+2. Double-click start_localhost.bat.
+3. Open http://localhost:8080
+
+Option 2 - PowerShell:
+cd "<extracted-folder>"
+python -m http.server 8080
+Then open http://localhost:8080
+
+If port 8080 is busy, use:
+python -m http.server 8001
+Then open http://localhost:8001
+
+If you see an old cached version, open clear-cache.html from the same localhost server:
+http://localhost:8080/clear-cache.html
+Then reload http://localhost:8080

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Striker - Community Setup Helper</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 40px 20px;
+    background: #150c05;
+    color: #fbf5e8;
+    font: 16px/1.5 system-ui, -apple-system, sans-serif;
+    display: flex; justify-content: center;
+  }
+  .wrap { width: min(780px, 100%); }
+  h1 { font-size: 32px; margin: 0 0 6px; font-family: Georgia, serif; font-style: italic; }
+  .lede { color: #c6b89a; margin: 0 0 28px; }
+  .card { background: #1e130a; border: 1px solid rgba(255,241,205,0.15); border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #c8a65a; font-weight: 700; margin-bottom: 6px; }
+  input { width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,0.35); color: #fbf5e8; border: 1px solid rgba(255,241,205,0.15); box-sizing: border-box; }
+  input:focus { outline: none; border-color: #c8a65a; }
+  .pin { letter-spacing: 0.4em; font-family: monospace; }
+  .out { background: #0b0603; border: 1px solid rgba(200,166,90,0.3); border-radius: 10px; padding: 16px; font-family: monospace; font-size: 13px; color: #fbf5e8; word-break: break-word; white-space: pre-wrap; }
+  .out.empty { color: #8b7e66; font-style: italic; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: linear-gradient(180deg, #c8a65a, #a3823b); color: #1a1108; border: none; font: 700 13px/1 system-ui; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .tip { color: #c6b89a; font-size: 13px; }
+  code { background: rgba(255,241,205,0.08); padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Striker community setup</h1>
+  <p class="lede">Admin is now community-scoped through the <code>players.role</code> column. Use this page only if you want to generate a manual community seed SQL block without typing a plain PIN into source files.</p>
+
+  <div class="card">
+    <label for="name">Community name</label>
+    <input id="name" value="IISc Carrom Club" autocomplete="off" />
+  </div>
+
+  <div class="card">
+    <label for="slug">Community slug/code</label>
+    <input id="slug" value="iisc-carrom-club" autocomplete="off" />
+    <p class="tip" style="margin-top: 8px;">The app hashes community PINs with <code>striker_community_pin_v1|slug|pin</code>.</p>
+  </div>
+
+  <div class="card">
+    <label for="pin">4-digit community PIN</label>
+    <input id="pin" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="PIN" autocomplete="off" />
+  </div>
+
+  <div class="card">
+    <label>Generated SQL</label>
+    <div id="out" class="out empty">Enter a 4-digit PIN.</div>
+    <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+      <button class="btn" id="copy" disabled>Copy SQL</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Recommended path</label>
+    <p class="tip">
+      Prefer running <code>supabase-community-schema.sql</code>, then:
+      <br />
+      <code>select * from public.setup_default_iisc_community('1234');</code>
+      <br />
+      Replace <code>1234</code> with the real PIN. That database function stores only the salted hash.
+    </p>
+  </div>
+</div>
+
+<script>
+const nameEl = document.getElementById("name");
+const slugEl = document.getElementById("slug");
+const pinEl = document.getElementById("pin");
+const outEl = document.getElementById("out");
+const copyBtn = document.getElementById("copy");
+
+function normalizeSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
+async function sha256(s) {
+  const buf = new TextEncoder().encode(s);
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function render() {
+  const name = nameEl.value.trim() || "IISc Carrom Club";
+  const slug = normalizeSlug(slugEl.value || name);
+  const pin = pinEl.value.replace(/\D/g, "").slice(0, 4);
+  pinEl.value = pin;
+  slugEl.value = slug;
+  if (pin.length !== 4 || !slug) {
+    outEl.className = "out empty";
+    outEl.textContent = "Enter a 4-digit PIN.";
+    copyBtn.disabled = true;
+    return;
+  }
+  const hash = await sha256(`striker_community_pin_v1|${slug}|${pin}`);
+  const sql =
+`insert into public.communities (name, slug, pin_hash, is_default)
+values ('${name.replace(/'/g, "''")}', '${slug}', '${hash}', ${slug === "iisc-carrom-club" ? "true" : "false"})
+on conflict (slug)
+do update set
+  name = excluded.name,
+  pin_hash = excluded.pin_hash,
+  is_default = excluded.is_default,
+  updated_at = now();`;
+  outEl.className = "out";
+  outEl.textContent = sql;
+  copyBtn.disabled = false;
+  copyBtn.dataset.clip = sql;
+}
+
+[nameEl, slugEl, pinEl].forEach(el => el.addEventListener("input", render));
+
+copyBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(copyBtn.dataset.clip || "");
+    copyBtn.textContent = "Copied";
+    setTimeout(() => { copyBtn.textContent = "Copy SQL"; }, 1500);
+  } catch {
+    alert("Copy failed. Select and copy manually.");
+  }
+});
+
+render();
+</script>
+</body>
+</html>

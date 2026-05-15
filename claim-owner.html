@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Striker - Claim Community Ownership</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 40px 20px; background: #150c05; color: #fbf5e8;
+         font: 16px/1.5 system-ui, -apple-system, sans-serif;
+         display: flex; justify-content: center; min-height: 100vh; }
+  .wrap { width: min(640px, 100%); }
+  h1 { font-size: 32px; margin: 0 0 6px; font-family: Georgia, serif; font-style: italic; }
+  .lede { color: #c6b89a; margin: 0 0 28px; }
+  .card { background: #1e130a; border: 1px solid rgba(255,241,205,0.15);
+          border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+          color: #c8a65a; font-weight: 700; margin-bottom: 6px; }
+  input { width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px;
+          background: rgba(0,0,0,0.35); color: #fbf5e8;
+          border: 1px solid rgba(255,241,205,0.15); box-sizing: border-box; }
+  input:focus { outline: none; border-color: #c8a65a; }
+  .pin { letter-spacing: 0.4em; font-family: monospace; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px;
+         border-radius: 999px; background: linear-gradient(180deg, #c8a65a, #a3823b);
+         color: #1a1108; border: none; font: 700 13px/1 system-ui;
+         letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .ok  { color: #6b8e3d; }
+  .err { color: #d94562; }
+  .tip { color: #c6b89a; font-size: 13px; }
+  code { background: rgba(255,241,205,0.08); padding: 2px 6px; border-radius: 4px; }
+  a { color: #c8a65a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Claim community ownership</h1>
+  <p class="lede">
+    Use this page once, right after the default IISc community is created and you've
+    signed in to the app and created your player. It promotes your player to
+    <code>owner</code>, which unlocks Admin mode inside the app.
+  </p>
+
+  <div class="card">
+    <label for="slug">Community slug</label>
+    <input id="slug" value="iisc-carrom-club" autocomplete="off" />
+    <p class="tip" style="margin-top:8px;">Default: <code>iisc-carrom-club</code>. For other communities, use that community's slug.</p>
+  </div>
+
+  <div class="card">
+    <label for="pin">Community PIN (4 digits)</label>
+    <input id="pin" class="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" autocomplete="off" />
+  </div>
+
+  <div class="card">
+    <label for="name">Your player name (exactly as you signed in)</label>
+    <input id="name" placeholder="e.g. Raj" autocomplete="off" />
+  </div>
+
+  <div class="card" style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+    <button class="btn" id="go">Claim ownership</button>
+    <div id="msg" class="tip"></div>
+  </div>
+
+  <div class="card">
+    <p class="tip" style="margin:0;">
+      This only works while the community has <strong>no owner yet</strong>. After
+      promotion, return to <a href="index.html">the app</a>, sign out and sign back
+      in to refresh your role, then tap <strong>Admin</strong> in the top bar.
+    </p>
+  </div>
+</div>
+
+<script src="dist/supabase.min.js"></script>
+<script>
+const SUPABASE_URL  = "https://csdrlzvkwtkpjfjzglsl.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzZHJsenZrd3RrcGpmanpnbHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NTY1NjQsImV4cCI6MjA5MjMzMjU2NH0.0_QrLivfuNpDcIm0p4bOsFAbFUKDTgQD-amQOPFFkas";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+function normalizeSlug(v) {
+  return String(v||"").trim().toLowerCase().replace(/&/g," and ")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,64);
+}
+async function sha256Hex(s){
+  const buf = new TextEncoder().encode(s);
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+const slugEl = document.getElementById("slug");
+const pinEl  = document.getElementById("pin");
+const nameEl = document.getElementById("name");
+const msgEl  = document.getElementById("msg");
+const btn    = document.getElementById("go");
+
+pinEl.addEventListener("input", () => { pinEl.value = pinEl.value.replace(/\D/g,"").slice(0,4); });
+
+btn.addEventListener("click", async () => {
+  msgEl.className = "tip"; msgEl.textContent = "";
+  const slug = normalizeSlug(slugEl.value);
+  const pin  = pinEl.value.trim();
+  const name = nameEl.value.trim();
+  if (!slug)              return msgEl.textContent = "Enter the community slug.";
+  if (!/^\d{4}$/.test(pin)) return msgEl.textContent = "PIN must be 4 digits.";
+  if (!name)              return msgEl.textContent = "Enter your player name.";
+  btn.disabled = true; msgEl.textContent = "Authenticating...";
+  try {
+    let { data: sess } = await sb.auth.getSession();
+    if (!sess?.session) {
+      const { error } = await sb.auth.signInAnonymously();
+      if (error) throw new Error("Anonymous Auth must be enabled in Supabase. " + error.message);
+    }
+    msgEl.textContent = "Joining community...";
+    const pinHash = await sha256Hex(`striker_community_pin_v1|${slug}|${pin}`);
+    const joinRes = await sb.rpc("join_community_with_pin", { p_slug: slug, p_pin_hash: pinHash });
+    if (joinRes.error) throw new Error(joinRes.error.message);
+
+    msgEl.textContent = "Claiming ownership...";
+    const { data, error } = await sb.rpc("bootstrap_community_owner", {
+      p_community_slug: slug,
+      p_community_pin_hash: pinHash,
+      p_player_name: name,
+    });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    msgEl.className = "ok";
+    msgEl.textContent = `Success: ${row.player_name} is now ${row.role}. Open the app, sign out, then sign back in.`;
+  } catch (e) {
+    msgEl.className = "err";
+    msgEl.textContent = e.message || String(e);
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
