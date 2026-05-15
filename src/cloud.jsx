@@ -1,7 +1,7 @@
 // Supabase client + community access + player PIN auth + match sync
 
-const SUPABASE_URL = "https://csdrlzvkwtkpjfjzglsl.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzZHJsenZrd3RrcGpmanpnbHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NTY1NjQsImV4cCI6MjA5MjMzMjU2NH0.0_QrLivfuNpDcIm0p4bOsFAbFUKDTgQD-amQOPFFkas";
+const SUPABASE_URL = "https://fzpktrfuwbrmkhemvyqr.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6cGt0cmZ1d2JybWtoZW12eXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTQ0MDAsImV4cCI6MjA5MzM5MDQwMH0.Exre7HElvUiuP2cf1lqX8-wliWdOAzkxtGJCwbxfqMg";
 
 const COMMUNITY_SESSION_KEY = "striker.community.session.v1";
 const PLAYER_SESSION_KEY = "striker.player.session.v2";

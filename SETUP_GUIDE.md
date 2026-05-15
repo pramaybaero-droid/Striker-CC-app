@@ -10,7 +10,7 @@ default community PIN and full admin powers.
 ### 1a. Create / open a Supabase project
 1. Go to https://supabase.com and sign in.
 2. Create a new project (or pick the existing one used in `dist/supabase.min.js`
-   / `index.html` — the `SUPABASE_URL` constant is `https://csdrlzvkwtkpjfjzglsl.supabase.co`).
+   / `index.html` — the `SUPABASE_URL` constant is `https://fzpktrfuwbrmkhemvyqr.supabase.co`).
    If you use your own project, replace both `SUPABASE_URL` and `SUPABASE_ANON`
    in **two places**: inside `index.html` (search for `SUPABASE_URL =`) and
    inside `claim-owner.html`.
