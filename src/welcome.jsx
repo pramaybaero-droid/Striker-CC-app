@@ -1,6 +1,6 @@
 // Welcome screen: enter names and match rules. Coin colors are decided by the toss.
 
-function Welcome({ onStart, onHelp }) {
+function Welcome({ onStart, onHelp, community }) {
   const [matchType, setMatchType] = React.useState("singles");
   const [totalSets, setTotalSets] = React.useState(3);
   const [scoreFormat, setScoreFormat] = React.useState("standard");
@@ -10,6 +10,14 @@ function Welcome({ onStart, onHelp }) {
   const [teamA2, setTeamA2] = React.useState("");
   const [teamB1, setTeamB1] = React.useState("");
   const [teamB2, setTeamB2] = React.useState("");
+  const [roster, setRoster] = React.useState([]);
+  const [rosterOpen, setRosterOpen] = React.useState(false);
+  const [rosterVersion, setRosterVersion] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!community?.id) { setRoster([]); return; }
+    setRoster(getRoster(community.id, community.slug));
+  }, [community?.id, community?.slug, rosterVersion]);
 
   const trim = (v) => v.trim();
   const singlesReady = trim(n1) && trim(n2) && trim(n1) !== trim(n2);
@@ -20,16 +28,22 @@ function Welcome({ onStart, onHelp }) {
   const submit = (e) => {
     e.preventDefault();
     if (!ready) return;
+    if (community?.id) {
+      const used = matchType === "doubles"
+        ? [teamA1, teamA2, teamB1, teamB2].map(trim)
+        : [n1, n2].map(trim);
+      const existing = getRoster(community.id, community.slug);
+      const merged = [...existing];
+      for (const n of used) {
+        if (n && !merged.some(x => x.toLowerCase() === n.toLowerCase())) merged.push(n);
+      }
+      if (merged.length !== existing.length) saveRoster(community.id, merged);
+    }
     onStart({
-      matchType,
-      totalSets,
-      scoreFormat,
-      name1: trim(n1),
-      name2: trim(n2),
-      teamA1: trim(teamA1),
-      teamA2: trim(teamA2),
-      teamB1: trim(teamB1),
-      teamB2: trim(teamB2),
+      matchType, totalSets, scoreFormat,
+      name1: trim(n1), name2: trim(n2),
+      teamA1: trim(teamA1), teamA2: trim(teamA2),
+      teamB1: trim(teamB1), teamB2: trim(teamB2),
     });
   };
 
@@ -46,36 +60,22 @@ function Welcome({ onStart, onHelp }) {
           <div className="setup-block">
             <div className="eyebrow">Players</div>
             <div className="option-row">
-              <button type="button" className={`option-pill ${matchType === "singles" ? "active" : ""}`} onClick={() => setMatchType("singles")}>
-                Singles
-              </button>
-              <button type="button" className={`option-pill ${matchType === "doubles" ? "active" : ""}`} onClick={() => setMatchType("doubles")}>
-                Doubles
-              </button>
+              <button type="button" className={`option-pill ${matchType === "singles" ? "active" : ""}`} onClick={() => setMatchType("singles")}>Singles</button>
+              <button type="button" className={`option-pill ${matchType === "doubles" ? "active" : ""}`} onClick={() => setMatchType("doubles")}>Doubles</button>
             </div>
           </div>
-
           <div className="setup-block">
             <div className="eyebrow">Sets</div>
             <div className="option-row">
-              <button type="button" className={`option-pill ${totalSets === 1 ? "active" : ""}`} onClick={() => setTotalSets(1)}>
-                1 set
-              </button>
-              <button type="button" className={`option-pill ${totalSets === 3 ? "active" : ""}`} onClick={() => setTotalSets(3)}>
-                3 sets
-              </button>
+              <button type="button" className={`option-pill ${totalSets === 1 ? "active" : ""}`} onClick={() => setTotalSets(1)}>1 set</button>
+              <button type="button" className={`option-pill ${totalSets === 3 ? "active" : ""}`} onClick={() => setTotalSets(3)}>3 sets</button>
             </div>
           </div>
-
           <div className="setup-block wide">
             <div className="eyebrow">Scoring</div>
             <div className="option-row">
-              <button type="button" className={`option-pill ${scoreFormat === "standard" ? "active" : ""}`} onClick={() => setScoreFormat("standard")}>
-                25 pts / 8 boards
-              </button>
-              <button type="button" className={`option-pill ${scoreFormat === "quick" ? "active" : ""}`} onClick={() => setScoreFormat("quick")}>
-                15 pts / 4 boards
-              </button>
+              <button type="button" className={`option-pill ${scoreFormat === "standard" ? "active" : ""}`} onClick={() => setScoreFormat("standard")}>25 pts / 8 boards</button>
+              <button type="button" className={`option-pill ${scoreFormat === "quick" ? "active" : ""}`} onClick={() => setScoreFormat("quick")}>15 pts / 4 boards</button>
             </div>
           </div>
         </div>
@@ -84,43 +84,40 @@ function Welcome({ onStart, onHelp }) {
           <div className="names">
             <div className="name-field">
               <div className="eyebrow">Player one</div>
-              <input autoFocus placeholder="Name..." value={n1} onChange={e => setN1(e.target.value)} maxLength={24} />
+              <NameInput autoFocus placeholder="Name..." value={n1} onChange={setN1} roster={roster} exclude={[n2]} />
             </div>
-
             <div className="versus">vs.</div>
-
             <div className="name-field">
               <div className="eyebrow">Player two</div>
-              <input placeholder="Name..." value={n2} onChange={e => setN2(e.target.value)} maxLength={24} />
+              <NameInput placeholder="Name..." value={n2} onChange={setN2} roster={roster} exclude={[n1]} />
             </div>
           </div>
         ) : (
           <div className="names doubles-names">
             <div className="name-field team-field">
               <div className="eyebrow">Team A</div>
-              <input autoFocus placeholder="Player A1..." value={teamA1} onChange={e => setTeamA1(e.target.value)} maxLength={24} />
-              <input placeholder="Player A2..." value={teamA2} onChange={e => setTeamA2(e.target.value)} maxLength={24} />
+              <NameInput autoFocus placeholder="Player A1..." value={teamA1} onChange={setTeamA1} roster={roster} exclude={[teamA2, teamB1, teamB2]} />
+              <NameInput placeholder="Player A2..." value={teamA2} onChange={setTeamA2} roster={roster} exclude={[teamA1, teamB1, teamB2]} />
             </div>
-
             <div className="versus">vs.</div>
-
             <div className="name-field team-field">
               <div className="eyebrow">Team B</div>
-              <input placeholder="Player B1..." value={teamB1} onChange={e => setTeamB1(e.target.value)} maxLength={24} />
-              <input placeholder="Player B2..." value={teamB2} onChange={e => setTeamB2(e.target.value)} maxLength={24} />
+              <NameInput placeholder="Player B1..." value={teamB1} onChange={setTeamB1} roster={roster} exclude={[teamA1, teamA2, teamB2]} />
+              <NameInput placeholder="Player B2..." value={teamB2} onChange={setTeamB2} roster={roster} exclude={[teamA1, teamA2, teamB1]} />
             </div>
           </div>
         )}
 
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div className="tip">
-            Next: toss the striker / {totalSets} set{totalSets === 1 ? "" : "s"} / {rules.limitPoints} points or {rules.limitBoards} boards
+            Roster: {roster.length} name{roster.length === 1 ? "" : "s"} / Next: {totalSets} set{totalSets === 1 ? "" : "s"} / {rules.limitPoints} points or {rules.limitBoards} boards
           </div>
           <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
+            {community?.id && (
+              <button type="button" className="btn ghost" onClick={() => setRosterOpen(true)}>Manage roster</button>
+            )}
             {onHelp && (
-              <button type="button" className="btn ghost" onClick={onHelp}>
-                How it works
-              </button>
+              <button type="button" className="btn ghost" onClick={onHelp}>How it works</button>
             )}
             <button type="submit" className="btn primary" disabled={!ready}>
               Toss the Striker ->
@@ -128,6 +125,16 @@ function Welcome({ onStart, onHelp }) {
           </div>
         </div>
       </form>
+
+      {community?.id && (
+        <RosterManager
+          open={rosterOpen}
+          onClose={() => { setRosterOpen(false); setRosterVersion(v => v + 1); }}
+          communityId={community.id}
+          communityName={community.name}
+          communitySlug={community.slug}
+        />
+      )}
     </div>
   );
 }

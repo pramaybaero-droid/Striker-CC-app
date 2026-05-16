@@ -1,7 +1,7 @@
 // Toss screen: spin the striker, reveal winner, winner picks Break or Side
 
 function Toss({ match, onDone }) {
-  const [phase, setPhase] = React.useState("idle"); // idle | spinning | winner | choosing
+  const [phase, setPhase] = React.useState("idle"); // idle | spinning | winner
   const [winner, setWinner] = React.useState(null); // "p1" | "p2"
 
   const p1 = match.p1, p2 = match.p2;
@@ -19,8 +19,8 @@ function Toss({ match, onDone }) {
     }, 1300);
   };
 
-  const chooseBreak = (who) => {
-    // Winner chose to break -> they break AND get White coins automatically.
+  const chooseBreak = () => {
+    // Winner breaks first -> winner takes White, opponent takes Black.
     const newP1Color = winner === "p1" ? "White" : "Black";
     const newP2Color = winner === "p2" ? "White" : "Black";
     onDone({
@@ -28,14 +28,11 @@ function Toss({ match, onDone }) {
       p1Color: newP1Color, p2Color: newP2Color,
     });
   };
-  const chooseSide = () => setPhase("choosing");
-  const confirmSide = (chosenColor) => {
-    // Winner picks a side/color; opponent breaks.
+  const chooseSide = () => {
+    // Winner declines to break -> winner takes Black, opponent breaks with White.
     const other = winner === "p1" ? "p2" : "p1";
-    // Swap colors so winner has the chosen color
-    let newP1Color = match.p1.color, newP2Color = match.p2.color;
-    if (winner === "p1" && match.p1.color !== chosenColor) { newP1Color = chosenColor; newP2Color = chosenColor === "White" ? "Black" : "White"; }
-    if (winner === "p2" && match.p2.color !== chosenColor) { newP2Color = chosenColor; newP1Color = chosenColor === "White" ? "Black" : "White"; }
+    const newP1Color = winner === "p1" ? "Black" : "White";
+    const newP2Color = winner === "p2" ? "Black" : "White";
     onDone({
       tossWinner: winner, tossChoice: "side", breakPlayer: other,
       p1Color: newP1Color, p2Color: newP2Color,
@@ -50,7 +47,6 @@ function Toss({ match, onDone }) {
           {phase === "idle" && <>Spin the <em>striker.</em></>}
           {phase === "spinning" && <>Spinning...</>}
           {phase === "winner" && <>The toss goes to <em>{match[winner].name}.</em></>}
-          {phase === "choosing" && <><em>{match[winner].name}</em> picks a side.</>}
         </h1>
 
         <div className="toss-stage">
@@ -81,37 +77,11 @@ function Toss({ match, onDone }) {
                 </button>
                 <button type="button" className="choice-card" onClick={chooseSide}>
                   <div className="eyebrow">Option B</div>
-                  <div className="big">Choose your side</div>
-                  <div className="sub">Pick White or Black. Opponent breaks first.</div>
+                  <div className="big">Let opponent break</div>
+                  <div className="sub">You take the <strong>Black</strong> coins. Opponent breaks first with White.</div>
                 </button>
               </div>
               <button className="btn ghost sm" onClick={spin} style={{ marginTop: 8 }}>Re-spin</button>
-            </>
-          )}
-
-          {phase === "choosing" && (
-            <>
-              <div className="toss-choice">
-                <button type="button" className="choice-card" onClick={() => confirmSide("White")}>
-                  <div className="row" style={{ gap: 14 }}>
-                    <Coin color="white" size={36} />
-                    <div>
-                      <div className="big">Take White</div>
-                      <div className="sub">You play the ivory coins.</div>
-                    </div>
-                  </div>
-                </button>
-                <button type="button" className="choice-card" onClick={() => confirmSide("Black")}>
-                  <div className="row" style={{ gap: 14 }}>
-                    <Coin color="black" size={36} />
-                    <div>
-                      <div className="big">Take Black</div>
-                      <div className="sub">You play the ebony coins.</div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-              <button className="btn ghost sm" onClick={() => setPhase("winner")}>Back</button>
             </>
           )}
         </div>

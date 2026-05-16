@@ -72,6 +72,9 @@ function matchLimitPoints(match) {
 }
 
 function matchLimitBoards(match) {
+  if (match?.tiebreak?.boards && match?.tiebreak?.setNumber === match?.setNo) {
+    return Number(match.tiebreak.boards);
+  }
   return Number(match?.limitBoards) || scoreRules(match?.scoreFormat).limitBoards;
 }
 
