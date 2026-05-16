@@ -53,7 +53,7 @@ function NameInput({ value, onChange, placeholder, autoFocus, roster, exclude })
   const matches = (roster || [])
     .filter(n => !exLower.includes(String(n).toLowerCase()))
     .filter(n => !filter || String(n).toLowerCase().includes(filter))
-    .slice(0, 12);
+    .slice(0, 50);
 
   React.useEffect(() => {
     if (!open) return;
@@ -107,7 +107,7 @@ function NameInput({ value, onChange, placeholder, autoFocus, roster, exclude })
   );
 }
 
-function RosterManager({ open, onClose, communityId, communityName, communitySlug }) {
+function RosterManager({ open, onClose, communityId, communityName, communitySlug, onListChange }) {
   const [list, setList] = React.useState([]);
   const [draft, setDraft] = React.useState("");
 
@@ -121,14 +121,22 @@ function RosterManager({ open, onClose, communityId, communityName, communitySlu
     const v = draft.trim();
     if (!v) return;
     if (list.some(x => x.toLowerCase() === v.toLowerCase())) { setDraft(""); return; }
-    setList(saveRoster(communityId, [...list, v]));
+    const next = saveRoster(communityId, [...list, v]);
+    setList(next);
+    onListChange && onListChange(next);
     setDraft("");
   };
 
-  const remove = (name) => setList(saveRoster(communityId, list.filter(x => x !== name)));
+  const remove = (name) => {
+    const next = saveRoster(communityId, list.filter(x => x !== name));
+    setList(next);
+    onListChange && onListChange(next);
+  };
 
   const seedDefault = () => {
-    setList(saveRoster(communityId, [...new Set([...list, ...DEFAULT_IISC_ROSTER])]));
+    const next = saveRoster(communityId, [...new Set([...list, ...DEFAULT_IISC_ROSTER])]);
+    setList(next);
+    onListChange && onListChange(next);
   };
 
   return (

@@ -78,7 +78,7 @@ function Toss({ match, onDone }) {
                 <button type="button" className="choice-card" onClick={chooseSide}>
                   <div className="eyebrow">Option B</div>
                   <div className="big">Let opponent break</div>
-                  <div className="sub">You take the <strong>Black</strong> coins. Opponent breaks first with White.</div>
+                  <div className="sub">You take <strong>Black</strong> carrommen and can switch sides. Opponent breaks first with White.</div>
                 </button>
               </div>
               <button className="btn ghost sm" onClick={spin} style={{ marginTop: 8 }}>Re-spin</button>

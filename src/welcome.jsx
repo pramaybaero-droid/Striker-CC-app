@@ -133,6 +133,7 @@ function Welcome({ onStart, onHelp, community }) {
           communityId={community.id}
           communityName={community.name}
           communitySlug={community.slug}
+          onListChange={setRoster}
         />
       )}
     </div>
